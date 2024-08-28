@@ -1,0 +1,165 @@
+/* إعدادات الخطوط والخلفيات العامة */
+body {
+    font-family: 'Poppins', 'Roboto', sans-serif;
+    background-color: #1b2a38; /* لون خلفية داكن */
+    color: #ffffff; /* لون النص الأساسي */
+}
+
+/* الحاوية العامة */
+.container {
+    max-width: 600px;
+    margin-top: 50px;
+    padding: 20px;
+    background-color: #ffffff; /* لون خلفية الحاوية */
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* تأثير الظل */
+}
+
+/* تصميم البطاقات */
+.card {
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* تأثير الظل على البطاقات */
+    background-color: #2a3e50; /* لون خلفية البطاقات */
+    border-color: #34d1bf; /* حدود البطاقات بلون فيروزي */
+}
+
+/* رأس البطاقات */
+.card-header {
+    border-radius: 10px 10px 0 0;
+}
+
+/* عنوان البطاقات */
+.card-title {
+    font-weight: 700; /* جعل العنوان عريض */
+    color: #ffffff; /* لون النص */
+}
+
+/* الأزرار */
+.btn-primary, .btn {
+    background-color: #34d1bf; /* زر بلون فيروزي */
+    border-color: #34d1bf;
+    color: #ffffff; /* لون النص داخل الزر */
+    border-radius: 50px;
+}
+
+.btn-primary:hover {
+    background-color: #f58c42; /* تغيير لون الزر عند التمرير إلى البرتقالي */
+    border-color: #f58c42;
+    transform: scale(1.05); /* تأثير التغيير في الحجم */
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+/* شريط التقدم */
+.progress {
+    display: none; /* إخفاء شريط التقدم في البداية */
+}
+
+.progress-bar {
+    transition: width 0.5s ease-in-out; /* تأثير على عرض شريط التقدم */
+}
+
+.progress-bar-success {
+    background-color: #28a745; /* اللون الأخضر */
+}
+
+/* الصور المصغرة */
+.thumbnail {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+    cursor: pointer; /* تغيير المؤشر إلى يد */
+    transition: transform 0.3s ease-in-out; /* تأثير التحويم */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* تأثير الظل للصورة */
+    margin-bottom: 15px;
+}
+
+.thumbnail:hover {
+    transform: scale(1.05); /* تأثير التكبير عند التحويم */
+}
+
+/* معلومات الفيديو */
+#video-info p {
+    font-weight: bold;
+}
+
+/* عرض الفيديو */
+#video-preview {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    display: none; /* إخفاء مشغل الفيديو في البداية */
+}
+
+/* شريط التنقل */
+.navbar {
+    background-color: #343a40; /* لون خلفية شريط التنقل */
+    margin-bottom: 20px;
+    height: 50px; /* تعيين الارتفاع المخصص لشريط التنقل */
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.navbar-brand {
+    color: #ffffff; /* لون النص في شريط التنقل */
+    height: 100%; /* ضبط ارتفاع العلامة التجارية لتتناسب مع ارتفاع شريط التنقل */
+    display: flex;
+    align-items: center; /* محاذاة العلامة التجارية في الوسط عموديًا */
+    font-size: 1.2rem; /* تعديل حجم الخط */
+}
+
+.navbar-brand:hover {
+    color: #f8f9fa; /* لون النص عند التمرير فوقه */
+}
+
+.navbar-nav .nav-link {
+    color: #ffffff; /* لون الروابط في شريط التنقل */
+    line-height: 50px; /* محاذاة النص عموديًا في الروابط */
+    font-size: 1rem; /* حجم الخط */
+}
+
+.navbar-nav .nav-link:hover {
+    color: #f8f9fa; /* لون الروابط عند التمرير فوقها */
+}
+
+.navbar-nav .nav-item.active .nav-link {
+    color: #ffc107; /* لون الروابط النشطة */
+}
+
+/* رسالة التنبيه */
+#message {
+    display: block; /* تأكد من أن العنصر غير مخفي */
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.text-facebook {
+    color: #3b5998; /* Facebook blue */
+}
+.text-youtube {
+    color: #FF0000; /* YouTube red */
+}
+.text-instagram {
+    color: #E4405F; /* Instagram pink */
+}
+.text-x {
+    color: #1DA1F2; /* X blue (formerly Twitter) */
+}
+.text-linkedin {
+    color: #0077B5; /* LinkedIn blue */
+}
+.text-facebook:hover,
+.text-youtube:hover,
+.text-instagram:hover,
+.text-x:hover,
+.text-linkedin:hover {
+    color: #000; /* Black on hover for all icons */
+}
+
+/* التوافق مع الشاشات الصغيرة */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+        margin-top: 20px;
+    }
+}
