@@ -26,13 +26,34 @@ def validate_video_url(url):
     """
     Function to validate if the provided URL is a valid video URL.
     """
-    video_url_pattern = re.compile(r'^(https?://)?(www\.)?(youtube|facebook|instagram|twitter)\.com/.+$')
-    if not video_url_pattern.match(url):
+    # More permissive pattern that allows any URL (yt-dlp will handle validation)
+    url_pattern = re.compile(
+        r'^(https?://)?'  # http:// or https://
+        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'  # domain...
+        r'localhost|'  # localhost...
+        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+        r'(?::\d+)?'  # optional port
+        r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+    
+    if not url_pattern.match(url):
         raise ValidationError("الرابط المدخل غير صالح. الرجاء إدخال رابط صالح.")
 
 def sanitize_filename(filename):
     """Sanitize the filename to ensure it's filesystem-friendly."""
-    return re.sub(r'[\\/*?:"<>|]', "", filename)
+    # قائمة بالأحرف غير المسموحة في أسماء الملفات
+    invalid_chars = '<>:"/\\|?*'
+    for char in invalid_chars:
+        filename = filename.replace(char, '')
+    
+    # إزالة أي أحرف تحكم غير مرغوب فيها
+    filename = ''.join(char for char in filename if ord(char) >= 32)
+    
+    # تقصير الاسم إذا كان طويلاً جداً
+    if len(filename) > 150:
+        name, ext = os.path.splitext(filename)
+        filename = name[:150 - len(ext)] + ext
+    
+    return filename
 
 def progress_hook(d):
     global download_status
@@ -61,7 +82,13 @@ def get_video_info(request):
             validate_video_url(video_url)
             ydl_opts = {
                 'quiet': True,
+                'no_warnings': True,
+                'restrictfilenames': True,
                 'format': 'bestaudio/best',
+                # Add these options to handle bot detection
+                'cookiefile': 'cookies.txt',  # Optional: use cookies if you have them
+                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'referer': 'https://www.google.com/',
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info_dict = ydl.extract_info(video_url, download=False)
@@ -102,6 +129,10 @@ def download_video(request):
                 'outtmpl': temp_file_path,
                 'noplaylist': True,
                 'progress_hooks': [progress_hook],
+                # إضافة هذه الخيارات لمنع مشاكل الدمج
+                'merge_output_format': 'mp4',  # إجبار الدمج إلى mp4
+                'windowsfilenames': True,      # أسماء ملفات متوافقة مع Windows
+                'restrictfilenames': True,     # تقييد أسماء الملفات
             }
             
             if download_type == 'audio':
@@ -114,31 +145,62 @@ def download_video(request):
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info_dict = ydl.extract_info(video_url, download=True)
                 title = sanitize_filename(info_dict.get('title', 'Unknown'))
-                ext = info_dict.get('ext', 'mp4')  # Default to mp4 if not available
+                ext = info_dict.get('ext', 'mp4') if download_type == 'video' else audio_format
                 filename = f"{title}.{ext}"
                 final_file_path = os.path.join(settings.MEDIA_ROOT, 'downloads', filename)
                 
-                if download_status["status"] == "finished":
+                # البحث عن الملف المنتهي بدلاً من الاعتماد على المسار المتوقع
+                actual_file = None
+                for file in os.listdir(temp_dir):
+                    if download_type == 'audio' and file.endswith(('.mp3', '.aac', '.m4a', '.wav')):
+                        actual_file = os.path.join(temp_dir, file)
+                        break
+                    elif download_type == 'video' and file.endswith(('.mp4', '.webm', '.mkv', '.avi', '.mov')):
+                        actual_file = os.path.join(temp_dir, file)
+                        break
+                
+                if actual_file and os.path.exists(actual_file):
                     # Ensure final directory exists
                     os.makedirs(os.path.dirname(final_file_path), exist_ok=True)
                     
-                    # Construct the full temporary file path
-                    temp_file_full_path = temp_file_path % {'title': title, 'ext': ext}
+                    # نقل الملف إلى الوجهة النهائية
+                    shutil.move(actual_file, final_file_path)
                     
-                    # Check if the temporary file exists
-                    if os.path.exists(temp_file_full_path):
-                        # Move the file to the final destination
-                        shutil.move(temp_file_full_path, final_file_path)
+                    if os.path.exists(final_file_path):
+                        logger.info(f"File exists at final destination: {final_file_path}")
+                        return JsonResponse({
+                            'finished': 'تم تنزيل الصوت بنجاح!' if download_type == 'audio' else 'تم تنزيل الفيديو بنجاح!', 
+                            'file_path': os.path.join(settings.MEDIA_URL, 'downloads', filename),
+                            'filename': filename
+                        })
+                    else:
+                        logger.error(f"Final file does not exist. Expected path: {final_file_path}")
+                        return JsonResponse({'error': 'حدث خطأ في تنزيل الملف. الرجاء المحاولة مرة أخرى.'}, status=500)
+                else:
+                    # محاولة بديلة: البحث عن أي ملف وسائط في المجلد المؤقت
+                    for root, dirs, files in os.walk(temp_dir):
+                        for file in files:
+                            if download_type == 'audio' and file.endswith(('.mp3', '.aac', '.m4a', '.wav')):
+                                actual_file = os.path.join(root, file)
+                                break
+                            elif download_type == 'video' and file.endswith(('.mp4', '.webm', '.mkv', '.avi', '.mov')):
+                                actual_file = os.path.join(root, file)
+                                break
+                    
+                    if actual_file and os.path.exists(actual_file):
+                        os.makedirs(os.path.dirname(final_file_path), exist_ok=True)
+                        shutil.move(actual_file, final_file_path)
                         
                         if os.path.exists(final_file_path):
-                            logger.info(f"File exists at final destination: {final_file_path}")
-                            return JsonResponse({'finished': 'تم تنزيل الصوت بنجاح!' if download_type == 'audio' else 'تم تنزيل الفيديو بنجاح!', 'file_path': os.path.join(settings.MEDIA_URL, 'downloads', filename)})
-                        else:
-                            logger.error(f"Final file does not exist. Expected path: {final_file_path}")
-                            return JsonResponse({'error': 'حدث خطأ في تنزيل الملف. الرجاء المحاولة مرة أخرى.'}, status=500)
-                    else:
-                        logger.error(f"Temporary file does not exist. Expected path: {temp_file_full_path}")
-                        return JsonResponse({'error': 'حدث خطأ في تنزيل الملف المؤقت. الرجاء المحاولة مرة أخرى.'}, status=500)
+                            logger.info(f"File found and moved to: {final_file_path}")
+                            return JsonResponse({
+                                'finished': 'تم تنزيل الصوت بنجاح!' if download_type == 'audio' else 'تم تنزيل الفيديو بنجاح!', 
+                                'file_path': os.path.join(settings.MEDIA_URL, 'downloads', filename),
+                                'filename': filename
+                            })
+                    
+                    logger.error(f"No downloaded files found in temporary directory: {temp_dir}")
+                    return JsonResponse({'error': 'حدث خطأ في تنزيل الملف المؤقت. الرجاء المحاولة مرة أخرى.'}, status=500)
                 
         except ValidationError as e:
             logger.error(f"Validation error: {str(e)}")
@@ -146,5 +208,11 @@ def download_video(request):
         except Exception as e:
             logger.error(f"Unexpected error occurred: {str(e)}")
             return JsonResponse({'error': 'حدث خطأ غير متوقع: ' + str(e)}, status=500)
+        finally:
+            # تنظيف الملفات المؤقتة
+            try:
+                shutil.rmtree(temp_dir)
+            except Exception as e:
+                logger.error(f"Error cleaning up temporary directory: {str(e)}")
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
