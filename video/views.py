@@ -81,12 +81,12 @@ def get_video_info(request):
         try:
             validate_video_url(video_url)
             ydl_opts = {
+                'cookiefile': 'cookies.txt',  # Optional: use cookies if you have them
                 'quiet': True,
                 'no_warnings': True,
                 'restrictfilenames': True,
                 'format': 'bestaudio/best',
                 # Add these options to handle bot detection
-                'cookiefile': 'cookies.txt',  # Optional: use cookies if you have them
                 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 'referer': 'https://www.google.com/',
             }
